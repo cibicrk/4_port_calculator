@@ -1,0 +1,45 @@
+//`include "calc_if.sv"
+`include "calc_trans.sv"
+`include "calc_gen.sv"
+`include "calc_drv.sv"
+`include "calc_mon.sv"
+`include "calc_sb.sv"
+
+
+class calc_env;
+  virtual calc_if.DR_BFM dr_if;
+  virtual calc_if.MON mon_if;
+  
+  mailbox #(calc_trans) gen2dr = new();
+  mailbox #(calc_trans) mon2sb = new();
+  
+  calc_gen gen;
+  calc_drv drv;
+  calc_mon mon;
+  calc_sb sb;
+  
+  function new(virtual calc_if.DR_BFM dr_if,
+               virtual calc_if.MON mon_if);
+    this.dr_if = dr_if;
+    this.mon_if = mon_if;
+    
+  endfunction
+  
+  task build();
+    gen = new(gen2dr);
+    drv = new(dr_if,gen2dr);
+    mon = new(mon_if,mon2sb);
+    sb = new(mon2sb);
+  endtask
+  
+  task start();
+    fork
+    gen.start();
+    drv.start();
+    mon.start();
+    sb.start();
+    join
+  endtask
+  
+  
+endclass
