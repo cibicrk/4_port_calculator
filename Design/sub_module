@@ -1,0 +1,66 @@
+module sub_module(c_clk,rst, req_cmd_in, req_data_in, req_tag_in, out_resp, out_data, out_tag);
+input c_clk,rst;
+input [0:3] req_cmd_in;
+input [0:31] req_data_in;
+input [0:1] req_tag_in;
+output reg [0:1] out_resp;
+output reg [0:31] out_data;
+output reg [0:1] out_tag;
+reg [0:31] in1, in2;
+reg [0:4] shift;
+//reg [0:3] cmd;
+always @(posedge c_clk)
+ begin
+  if (!rst)
+    begin
+      in1 = req_data_in;
+     // cmd = req_cmd_in;
+      //#20;
+      @(posedge c_clk);
+      in2 = req_data_in; //wait for clock period
+      shift = in2[27:31];
+      if (req_cmd_in == 4'b0000) // No Operation
+         begin
+           out_resp = 2'b00;
+           out_data = 32'b0;
+           out_tag = req_tag_in;
+         end
+         else if (req_cmd_in == 4'b0001) // Addition
+         begin
+         out_data = in1 + in2;
+          if((~out_data[0]&in1[0]&in2[0])|(out_data[0]&(~in1[0])&(~in2[0])) == 1)
+           out_resp = 2'b10; //Overflow/Invalid
+          else
+           out_resp = 2'b01; //Sucessful Operation
+         out_tag = req_tag_in;
+         end
+         else if (req_cmd_in == 4'b0010) // Subtraction
+         begin
+           out_data = in1 - in2;
+           if((~out_data[0]&in1[0]&in2[0])|(out_data[0]&(~in1[0])&(~in2[0])) == 1)
+           out_resp = 2'b10; //Overflow/Invalid
+           else
+             out_resp = 2'b01; //Sucessful Operation
+          out_tag = req_tag_in;
+         end
+        else if (req_cmd_in == 4'b0101) // Shift left
+        begin
+         out_data = in1 << shift;
+         out_resp = 2'b01;
+         out_tag = req_tag_in;
+        end
+        else if (req_cmd_in == 4'b0110) // Shift right
+        begin
+         out_data = in1 >> shift;
+         out_resp = 2'b01;
+         out_tag = req_tag_in;
+        end
+        else
+         begin
+          out_resp = 2'b11;
+          out_data = 32'b0;
+          out_tag = req_tag_in;
+         end
+    end
+  end
+endmodule
