@@ -1,0 +1,50 @@
+//`include "calc_if.sv"
+//`include "calc_trans.sv"
+class calc_drv;
+  virtual calc_if.DR_BFM dr_if;
+  calc_trans duv_data;
+  
+  mailbox #(calc_trans) gen2dr;
+  
+  function new(virtual calc_if.DR_BFM dr_if,
+               mailbox #(calc_trans) gen2dr);
+    this.dr_if = dr_if;
+    this.gen2dr = gen2dr;
+  endfunction
+  
+  virtual task drive();
+    @(dr_if.dr_cb);
+    dr_if.dr_cb.req1_cmd <= duv_data.req1_cmd;
+    dr_if.dr_cb.req2_cmd <= duv_data.req2_cmd;
+    dr_if.dr_cb.req3_cmd <= duv_data.req3_cmd; 
+    dr_if.dr_cb.req4_cmd <= duv_data.req4_cmd;
+    dr_if.dr_cb.req1_tag <= duv_data.req1_tag;
+    dr_if.dr_cb.req2_tag <= duv_data.req2_tag;
+    dr_if.dr_cb.req3_tag <= duv_data.req3_tag;
+    dr_if.dr_cb.req4_tag <= duv_data.req4_tag;
+    dr_if.dr_cb.req1_data <= duv_data.req1_data1;
+    dr_if.dr_cb.req2_data <= duv_data.req2_data1;
+    dr_if.dr_cb.req3_data <= duv_data.req3_data1;
+    dr_if.dr_cb.req4_data <= duv_data.req4_data1;
+    @(dr_if.dr_cb);
+    dr_if.dr_cb.req1_data <= duv_data.req1_data2;
+    dr_if.dr_cb.req2_data <= duv_data.req2_data2;
+    dr_if.dr_cb.req3_data <= duv_data.req3_data2;
+    dr_if.dr_cb.req4_data <= duv_data.req4_data2;
+    dr_if.dr_cb. valid <= 1'b1;
+    @(negedge dr_if.dr_cb)
+    dr_if.dr_cb. valid <= 1'b0;
+    $display("Exit from DRV %0t",$time);
+  endtask:drive
+  
+  virtual task start();
+    fork
+      forever
+        begin
+          gen2dr.get(duv_data);
+          drive();
+          duv_data.display("FROM DRV");
+        end
+    join_none
+      endtask
+endclass : calc_drv
