@@ -1,0 +1,73 @@
+class calc_mon;
+  virtual calc_if.MON mon_if;
+  calc_trans sb_data;
+  
+  mailbox #(calc_trans) mon2sb;
+  
+  function new(virtual calc_if.MON mon_if,
+               mailbox #(calc_trans) mon2sb);
+    this.mon_if = mon_if;
+    this.mon2sb = mon2sb;
+    sb_data = new;
+  endfunction
+  
+  virtual task collect();
+    @(negedge mon_if.mon_cb);
+    $display("from mon negedge %0t",$time);
+    //wait(mon_if.mon_cb.valid);
+    sb_data.req1_cmd = mon_if.mon_cb.req1_cmd;
+    sb_data.req2_cmd = mon_if.mon_cb.req2_cmd;
+    sb_data.req3_cmd = mon_if.mon_cb.req3_cmd;
+    sb_data.req4_cmd = mon_if.mon_cb.req4_cmd;
+    
+    sb_data.req1_tag = mon_if.mon_cb.req1_tag;
+    sb_data.req2_tag = mon_if.mon_cb.req2_tag;
+    sb_data.req3_tag = mon_if.mon_cb.req3_tag;
+    sb_data.req4_tag = mon_if.mon_cb.req4_tag;
+    
+    sb_data.req1_data1 = mon_if.mon_cb.req1_data;
+    sb_data.req2_data1 = mon_if.mon_cb.req2_data;
+    sb_data.req3_data1 = mon_if.mon_cb.req3_data;
+    sb_data.req4_data1 = mon_if.mon_cb.req4_data;
+    
+    //@(mon_if.mon_cb);
+    wait(mon_if.mon_cb.valid);
+    $display("from mon valid is high %0t",$time);
+    sb_data.req1_data2 = mon_if.mon_cb.req1_data;
+    sb_data.req2_data2 = mon_if.mon_cb.req2_data;
+    sb_data.req3_data2 = mon_if.mon_cb.req3_data;
+    sb_data.req4_data2 = mon_if.mon_cb.req4_data;
+    @(mon_if.mon_cb);
+    $display("from mon output data present %0t",$time);
+    sb_data.out_data1 = mon_if.mon_cb.out_data1;
+    sb_data.out_data2 = mon_if.mon_cb.out_data2;
+    sb_data.out_data3 = mon_if.mon_cb.out_data3;
+    sb_data.out_data4 = mon_if.mon_cb.out_data4;
+    sb_data.out_resp1 = mon_if.mon_cb.out_resp1;
+    sb_data.out_resp2 = mon_if.mon_cb.out_resp2;
+    sb_data.out_resp3 = mon_if.mon_cb.out_resp3;
+    sb_data.out_resp4 = mon_if.mon_cb.out_resp4;
+    sb_data.out_tag1 = mon_if.mon_cb.out_tag1;
+    sb_data.out_tag2 = mon_if.mon_cb.out_tag2;
+    sb_data.out_tag3 = mon_if.mon_cb.out_tag3;
+    sb_data.out_tag4 = mon_if.mon_cb.out_tag4;
+    //@( mon_if.mon_cb);
+   wait(!mon_if.mon_cb.valid);
+    $display("from mon valid deasserted %0t",$time);
+    
+  endtask:collect
+  
+  virtual task start();
+    fork
+      forever
+        begin
+          collect();
+          sb_data.display("FROM MON");
+          mon2sb.put(sb_data);
+          
+        end
+    join_none
+      endtask
+  
+  
+endclass : calc_mon
