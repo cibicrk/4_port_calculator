@@ -1,0 +1,112 @@
+class calc_sb;
+   
+  calc_trans rcvd_xtn,cp_xtn;
+  
+  mailbox #(calc_trans) mon2sb;
+  
+  function new(mailbox #(calc_trans) mon2sb);
+    this.mon2sb = mon2sb;
+    cp_xtn = new;
+  endfunction
+  
+  task start();
+    forever
+      begin
+    mon2sb.get(rcvd_xtn); 
+    
+    create_out(rcvd_xtn.req1_cmd,rcvd_xtn.req1_tag,rcvd_xtn.req1_data1,
+      rcvd_xtn.req1_data2,cp_xtn.out_data1,cp_xtn.out_resp1,cp_xtn.out_tag1);  
+    create_out(rcvd_xtn.req2_cmd,rcvd_xtn.req2_tag,rcvd_xtn.req2_data1,  
+      rcvd_xtn.req2_data2,cp_xtn.out_data2,cp_xtn.out_resp2,cp_xtn.out_tag2);
+    create_out(rcvd_xtn.req3_cmd,rcvd_xtn.req3_tag,rcvd_xtn.req3_data1,rcvd_xtn.req3_data2,cp_xtn.out_data3,cp_xtn.out_resp3,cp_xtn.out_tag3);
+        create_out(rcvd_xtn.req4_cmd,rcvd_xtn.req4_tag,rcvd_xtn.req4_data1,rcvd_xtn.req4_data2,cp_xtn.out_data4,cp_xtn.out_resp4,cp_xtn.out_tag4);
+    
+    compare_rslt(rcvd_xtn.out_data1,rcvd_xtn.out_resp1,rcvd_xtn.out_tag1,
+                    cp_xtn.out_data1,cp_xtn.out_resp1,cp_xtn.out_tag1);
+    compare_rslt(rcvd_xtn.out_data2,rcvd_xtn.out_resp2,rcvd_xtn.out_tag2,
+                    cp_xtn.out_data2,cp_xtn.out_resp2,cp_xtn.out_tag2);
+    compare_rslt(rcvd_xtn.out_data3,rcvd_xtn.out_resp3,rcvd_xtn.out_tag3,
+                    cp_xtn.out_data3,cp_xtn.out_resp3,cp_xtn.out_tag3);
+    compare_rslt(rcvd_xtn.out_data4,rcvd_xtn.out_resp4,rcvd_xtn.out_tag4,
+                    cp_xtn.out_data4,cp_xtn.out_resp4,cp_xtn.out_tag4);
+      end       
+    
+  endtask
+  
+  task create_out(input bit[0:3] cmd_in,bit[0:1] tag_in, 
+                  bit[0:31] data_in1,bit[0:31] data_in2, 
+                  output bit[0:31] out_data, bit[0:1] out_resp,out_tag);
+    
+    bit[0:31] in1= data_in1;
+    bit[0:31] in2 = data_in2;
+    bit[0:4] shift = in2[27:31];
+    
+       if (cmd_in == 4'b0000) // No Operation
+         begin
+           out_resp = 2'b00;
+           out_data = 32'b0;
+           out_tag = tag_in;
+         end
+       else if (cmd_in == 4'b0001) // Addition
+         begin
+         out_data = in1 + in2;
+          if((~out_data[0]&in1[0]&in2[0])||(out_data[0]&(~in1[0])&(~in2[0])) == 1)
+           out_resp = 2'b10; //Overflow/Invalid
+          else
+           out_resp = 2'b01; //Sucessful Operation
+           out_tag = tag_in;
+         end
+       else if (cmd_in == 4'b0010) // Subtraction
+         begin
+           out_data = in1 - in2;
+           if((~out_data[0]&in1[0]&in2[0])|(out_data[0]&(~in1[0])&(~in2[0])) == 1)
+           out_resp = 2'b10; //Overflow/Invalid
+           else
+             out_resp = 2'b01; //Sucessful Operation
+          out_tag = tag_in;
+         end
+       else if (cmd_in == 4'b0101) // Shift left
+        begin
+         out_data = in1 << shift;
+         out_resp = 2'b01;
+         out_tag = tag_in;
+        end
+       else if (cmd_in == 4'b0110) // Shift right
+        begin
+         out_data = in1 >> shift;
+         out_resp = 2'b01;
+         out_tag = tag_in;
+        end
+       else
+         begin
+          out_resp = 2'b11;
+          out_data = 32'b0;
+          out_tag = tag_in;
+         end
+  endtask
+  
+  
+  task compare_rslt(input bit [0:31] data_rc, bit[0:1] resp_rc,tag_rc,
+                    bit[0:31] cp_data, bit[0:1] cp_resp,cp_tag);
+    
+    if(data_rc == cp_data)
+    $display("------------data_comparison_success-----------");
+    else
+      $display("----data_comparison_failed----monitor_data = %0d,Genertaed_data = %0d",data_rc,cp_data);
+    
+    
+    if(resp_rc == cp_resp)
+      $display("------------resp_comparison_success-----------");
+    else
+      $display("----resp_comparison_failed----monitor_resp = %0d,Genertaed_resp = %0d",resp_rc,cp_resp);
+    
+    if(tag_rc == cp_tag)
+      $display("------------tag_comparison_success-----------");
+    else
+      $display("----tag_comparison_failed----monitor_tag = %0d,Genertaed_tag = %0d",tag_rc,cp_tag);
+    
+  endtask
+    
+  
+  
+endclass
