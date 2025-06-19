@@ -1,0 +1,33 @@
+`include "calc_env.sv"
+
+class calc_test;
+  
+ virtual calc_if.DR_BFM dr_if;
+ virtual calc_if.MON mon_if;
+  
+  calc_env env;
+  
+  function new(virtual calc_if.DR_BFM dr_if,
+               virtual calc_if.MON mon_if);
+    this.dr_if = dr_if;
+    this.mon_if = mon_if;
+    env = new(dr_if,mon_if);
+    
+  endfunction
+  
+  //initial
+  task start();
+      begin
+     // dr_if = duv_if;
+    //  mon_if = duv_if;
+      //env = new(dr_if, mon_if);
+      env.build();
+      env.start();
+    end
+  endtask
+      
+    //$finish;
+  //endtask
+  
+  
+endclass
